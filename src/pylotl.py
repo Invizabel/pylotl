@@ -1,58 +1,146 @@
-# references:
-# x86/64: http://ref.x86asm.net/geek.html
 import argparse
-import binascii
 import re
+import requests
+import threading
+import urllib.parse
+import warnings
+from bs4 import BeautifulSoup
+from clear import clear
+
+CYAN = "\033[1;36m"
+GREEN = "\033[0;32m"
+RED = "\033[1;31m"
+
+def aggresive(host):
+    global data
+
+    try:
+        my_session = requests.Session() 
+        my_request = my_session.get(host, verify = False, headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"}, timeout = 10)
+        if my_request.status_code == 200:
+            data += f"{my_request.text}\n"
+
+    except:
+        pass
 
 def pylotl():
+    global data
+    data = ""
+
+    clear()
+    
     parser = argparse.ArgumentParser()
-    parser.add_argument("-filename", help = "specify file you want to disassemble | string", required = True, type = str)
+    parser.add_argument("-host", type = str, required = True)
     args = parser.parse_args()
-    filename = args.filename
+    website = args.host
     
-    results = []
-    x86_array = {"00": "ADD\tEb Gb", "01": "ADD\tEvqp Gvqp", "02": "ADD\tGb Eb", "03": "ADD\tGvqp Evqp", "04": "ADD\tAL Ib", "05": "ADD\trAX Ivds", "06": "PUSH\tES", "07": "POP\tES", "08": "OR\tEb Gb", "09": "OR\tEvqp Gvqp", "0A": "OR\tGb Eb", "0B": "OR\tGvqp Evqp", "0C": "OR\tAL Ib", "0D": "OR\trAX Ivds", "0E": "PUSH\tCS", "0F": "POP\tCS", "10": "ADC\tEb Gb", "11": "ADC\tEvqp Gvqp", "12": "ADC\tGb Eb", "13": "ADC\tGvqp Evqp", "14": "ADC\tAL Ib", "15": "ADC\trAX Ivds", "16": "PUSH\tSS", 17: "POP\tSS"}
-    x64_array = {"00": "ADD\tEb Gb", "01": "ADD\tEvqp Gvqp", "02": "ADD\tGb Eb", "03": "ADD\tGvqp Evqp", "04": "ADD\tAL Ib", "05": "ADD\trAX Ivds", "06": None, "07": None, "08": "OR\tEb Gb", "09": "OR\tEvqp Gvqp", "0A": "OR\tGb Eb", "0B": "OR\tGvqp Evqp", "0C": "OR\tAL Ib", "0D": "OR\trAX Ivds", "0E": None, "0F": None, "10": "ADC\tEb Gb", "11": "ADC\tEvqp Gvqp", "12": "ADC\tGb Eb", "13": "ADC\tGvqp Evqp", "14": "ADC\tAL Ib", "15": "ADC\trAX Ivds", "16": None, 17: None}
+    website = website.rstrip("/")
+    warnings.filterwarnings("ignore")
+ 
+    banned = []
+    visited = [website]
 
-    with open(filename, "rb") as file:
-        raw_data = file.read()
-
-    data = binascii.hexlify(raw_data).decode().upper()
-
-    hits = re.findall(r"\w{2}", data)
-
-    # detect architecture for improved accuracy
-    for hit in hits:
+    start = True
+    thread_list = []
+    visit_now = -1
+    while True:
         try:
-            if not x64_array[hit]:
-                detect = "x64"
-                break
+            visit_now += 1
+            visited = list(dict.fromkeys(visited[:]))
+            print(f"{CYAN}visiting: {GREEN}{visited[visit_now]}", flush = True)
+            my_thread = threading.Thread(target=aggresive, args = (visited[visit_now],))
+            thread_list.append(my_thread)
+            my_thread.start()
 
-            else:
-                detect = "x86"
-            
+            if start:
+                my_thread.join()
+                thread_list = []
+                start = False
+
+            links = []
+           
+            soup = BeautifulSoup(data, "html.parser")
+
+            try:
+                new_links = soup.find_all("a")
+                for link in new_links:
+                    if link.get("href") is not None:
+                        links.append(link.get("href"))
+
+            except:
+                pass
+
+            try:
+                soup.findAll("img")
+                images = soup.find_all("img")
+                for image in images:
+                    if image["src"] is not None:
+                        links.append(image["src"])
+
+            except:
+                pass
+
+            try:
+                new_links = soup.find_all("link")
+                for link in new_links:
+                    if link.get("href") is not None:
+                        links.append(link.get("href"))
+                   
+                    if link.get("imagesrcset") is not None:
+                        for i in link.get("imagesrcset").split(","):
+                            links.append(i.strip())
+
+            except:
+                pass
+           
+            links = list(dict.fromkeys(links[:]))
+           
+            for path in links:
+                if re.search("^[a-zA-Z0-9]", path.lstrip("/")) and not re.search("script|data:", path):
+                    if path.startswith("/"):
+                        visited.append(website + path)
+
+                    elif path.startswith("http://") or path.startswith("https://"):
+                        if urllib.parse.urlparse(website).netloc in urllib.parse.urlparse(path).netloc:
+                            visited.append(path)
+
+                    else:
+                        visited.append(website + "/" + path)
+
+            scripts = soup.find_all("script")
+            for script in scripts:
+                if script.get("src") is not None:
+                    path = script.get("src")
+                    if re.search("^[a-zA-Z0-9]", path.lstrip("/")) and not re.search("script|data:", path):
+                        if path.startswith("/"):
+                            visited.append(website + path)
+ 
+                        elif path.startswith("http://") or path.startswith("https://") or path.startswith("ftp://"):
+                            visited.append(path)
+ 
+                        else:
+                            visited.append(website + "/" + path)
+
+                data_list = []
+
+            if len(thread_list) % 8 == 0:
+                for thread in thread_list:
+                    thread.join()
+
+                thread_list = []
+ 
+        except IndexError:
+            break
+ 
         except:
             pass
-    
-    for hit in hits:
-        try:
-            if detect == "x86":
-                results.append(f"{hit}\t{x86_array[hit]}")
+ 
+    with open("links.txt", "a") as file:
+        for link in visited:
+            if urllib.parse.urlparse(website).netloc in link:
+                file.write(f"{link}\n")
 
-            elif detect == "x64":
-                results.append(f"{hit}\t{x86_array[hit]}")
-            
-        except:
-            pass
-
-    with open("assmebly.txt", "w") as file:
-        file.write(f"Detected architecture: {detect}\n")
-        for result in results:
-            print(result)
-            file.write(f"{result}\n")
-
-    print(f"Detected architecture: {detect}")
-    print("DONE!")
+    print(f"{RED}DONE!")
 
 if __name__ == "__main__":
     pylotl()
