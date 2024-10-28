@@ -135,12 +135,7 @@ def pylotl():
         except:
             pass
  
-    with open("links.txt", "a") as file:
-        for link in visited:
-            if urllib.parse.urlparse(website).netloc in link:
-                file.write(f"{link}\n")
-
-    print(f"{RED}DONE!")
+    return visited
 
 if __name__ == "__main__":
     pylotl()
