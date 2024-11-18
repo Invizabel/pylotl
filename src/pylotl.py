@@ -1,7 +1,7 @@
 import argparse
 import re
 import requests
-import threading
+import time
 import urllib.parse
 import warnings
 from bs4 import BeautifulSoup
@@ -11,51 +11,38 @@ CYAN = "\033[1;36m"
 GREEN = "\033[0;32m"
 RED = "\033[1;31m"
 
-def aggresive(host):
-    global data
-
-    try:
-        my_session = requests.Session() 
-        my_request = my_session.get(host, verify = False, headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"}, timeout = 10)
-        if my_request.status_code == 200:
-            data += f"{my_request.text}\n"
-
-    except:
-        pass
+fake_headers = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Accept-Encoding": "gzip, deflate",
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0",
+                "UPGRADE-INSECURE-REQUESTS": "1"}
 
 def pylotl():
-    global data
-    data = ""
-
     clear()
     
     parser = argparse.ArgumentParser()
     parser.add_argument("-host", type = str, required = True)
+    parser.add_argument("-crawl", type = int, required = True)
+    parser.add_argument("-delay", type = float, required = False, default = 0)
     args = parser.parse_args()
     website = args.host
-    
+
+    my_session = requests.Session()
     website = website.rstrip("/")
     warnings.filterwarnings("ignore")
  
     banned = []
     visited = [website]
 
-    start = True
-    thread_list = []
-    visit_now = -1
-    while True:
+    for visit_now in range(args.crawl):
         try:
-            visit_now += 1
             visited = list(dict.fromkeys(visited[:]))
             print(f"{CYAN}visiting: {GREEN}{visited[visit_now]}", flush = True)
-            my_thread = threading.Thread(target=aggresive, args = (visited[visit_now],))
-            thread_list.append(my_thread)
-            my_thread.start()
 
-            if start:
-                my_thread.join()
-                thread_list = []
-                start = False
+            time.sleep(args.delay)
+            
+            my_request = my_session.get(visited[visit_now], verify = False, headers = fake_headers, timeout = 10)
+            data = my_request.text
 
             links = []
            
@@ -120,14 +107,6 @@ def pylotl():
  
                         else:
                             visited.append(website + "/" + path)
-
-                data_list = []
-
-            if len(thread_list) % 8 == 0:
-                for thread in thread_list:
-                    thread.join()
-
-                thread_list = []
  
         except IndexError:
             break
