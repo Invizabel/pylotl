@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pylotl"
-version = "0.0.13"
+version = "0.0.17"
 authors = [
   { name="Invizabel" },
 ]
-description = "pylotl is a web crawler!"
+description = "pylotl is a web crawler and a search engine built on Flask!"
 readme = "README.md"
 license = { file="LICENSE.txt" }
 requires-python = ">=3.7"
@@ -20,6 +20,7 @@ classifiers = [
 
 dependencies = [
     "bs4",
+    "flask",
     "requests"]
 
 [project.urls]
