@@ -1,7 +1,9 @@
+import datetime
 import json
 import os
 import re
 import requests
+import threading
 import time
 import urllib.parse
 import warnings
@@ -19,6 +21,18 @@ fake_headers = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9
 
 my_session = requests.Session()
 
+def automatic_index():
+    yesterday = datetime.date.today()
+    while True:
+        time.sleep(60)
+        today = datetime.date.today()
+        if today != yesterday:
+            print("Starting automatic indexing!")
+            index()
+            print("Automatic indexing done!")
+
+        yesterday = datetime.date.today()
+        
 def crawl(website):
     website = website.rstrip("/")
     warnings.filterwarnings("ignore")
@@ -333,4 +347,5 @@ def main_html():
 
 if __name__ == "__main__":
     clear()
+    my_thread = threading.Thread(target = automatic_index).start()
     app.run(debug=False, port=5000)
