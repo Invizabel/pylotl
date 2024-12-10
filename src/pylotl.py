@@ -198,6 +198,7 @@ def crawl_html():
                       <label for="crawl">Crawl:</label><br>
                       <input type="text" id="crawl" name="crawl"><br>
                       <input type="submit" id="GO" name="GO" value="GO">
+                      </strong><br><a href="/search">Search</a>
                       </form>
                       </body>
                       </html>
