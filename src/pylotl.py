@@ -21,6 +21,8 @@ fake_headers = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9
 
 my_session = requests.Session()
 
+queue = []
+
 def automatic_index():
     yesterday = datetime.date.today()
     while True:
@@ -119,10 +121,21 @@ def crawl(website):
         except:
             pass
 
-    with open("links.txt", "a") as file:
-        for link in visited:
-            if urllib.parse.urlparse(website).netloc in link:
-                file.write(f"{link}\n")
+    exists = []
+    if os.path.exists("links.txt"):
+        with open("links.txt", "r") as file:
+            for line in file:
+                new_line = line.rstrip("\n")
+                exists.append(new_line)
+
+    try:
+        with open("links.txt", "a") as file:
+            for link in visited:
+                if urllib.parse.urlparse(website).netloc in link and link not in exists:
+                    file.write(f"{link}\n")
+
+    except:
+        pass
                 
 def index():
     urls = []
@@ -187,6 +200,8 @@ def search(query):
 
 @app.route("/crawl", methods=["GET", "POST"])
 def crawl_html():
+    global queue
+    
     if os.path.exists("links.txt"):
         if request.method == "GET":
             html = '''<html>
@@ -203,8 +218,6 @@ def crawl_html():
                       </body>
                       </html>
                     '''
-            
-            return render_template_string(html)
 
         if request.method == "POST":
             urls = []
@@ -214,17 +227,33 @@ def crawl_html():
                     urls.append(new_line.rstrip("/"))
 
             if request.form["crawl"].rstrip("/") not in urls:
-                crawl(request.form["crawl"])
-                index()
-                html = '''<html>
-                          <head>
-                          <title>pylotl</title>
-                          </head>
-                          <body>
-                          <form method="POST">
-                          <label for="crawl">Crawl:</label><br>
-                          <input type="text" id="crawl" name="crawl"><br>
-                          <input type="submit" id="GO" name="GO" value="GO">''' + f'<br><strong>Done crawling and indexing {request.form["crawl"]}</strong><br><a href="/search">Search</a></form></body></html>'
+                skip = False
+                for i in queue:
+                    if i == request.form["crawl"]:
+                        skip = True
+                        html = '''<html>
+                                  <head>
+                                  <title>pylotl</title>
+                                  </head>
+                                  <body>
+                                  <form method="POST">
+                                  <label for="crawl">Crawl:</label><br>
+                                  <input type="text" id="crawl" name="crawl"><br>
+                                  <input type="submit" id="GO" name="GO" value="GO">''' + f'<br><strong>{request.form["crawl"]} is already queued</strong><br><a href="/search">Search</a></form></body></html>'''
+
+                if not skip:
+                    queue.append(request.form["crawl"])
+                    crawl(request.form["crawl"])
+                    index()
+                    html = '''<html>
+                              <head>
+                              <title>pylotl</title>
+                              </head>
+                              <body>
+                              <form method="POST">
+                              <label for="crawl">Crawl:</label><br>
+                              <input type="text" id="crawl" name="crawl"><br>
+                              <input type="submit" id="GO" name="GO" value="GO">''' + f'<br><strong>Done crawling and indexing {request.form["crawl"]}</strong><br><a href="/search">Search</a></form></body></html>'''
 
             else:
                 html = '''<html>
@@ -236,11 +265,12 @@ def crawl_html():
                           <label for="crawl">Crawl:</label><br>
                           <input type="text" id="crawl" name="crawl"><br>
                           <input type="submit" id="GO" name="GO" value="GO">
+                          </strong><br><a href="/search">Search</a></form></body></html>
                           </form>
                           <strong>We already have that indexed!</strong>
                           </body>
                           </html>'''
-
+                
         return  render_template_string(html)
 
     else:
@@ -251,7 +281,7 @@ def crawl_html():
                       <title>pylotl</title>
                       </head>
                       <body>
-                      <strong>We are currently setting up. Please Try Again!</strong>
+                      <strong>We are currently setting up. Please try again!</strong>
                       </body>
                       </html>
                     '''
@@ -321,7 +351,7 @@ def search_html():
                       <title>pylotl</title>
                       </head>
                       <body>
-                      <strong>We are currently setting up. Please Try Again!</strong>
+                      <strong>We are currently setting up. Please try again!</strong>
                       </body>
                       </html>
                     '''
