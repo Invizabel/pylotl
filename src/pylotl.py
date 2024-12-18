@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import random
 import re
 import threading
 import time
@@ -19,16 +20,16 @@ options.add_argument("-headless")
 driver = webdriver.Firefox(options=options)
 
 def automatic_index():
-    yesterday = datetime.date.today()
+    last_year = datetime.datetime.now().year
     while True:
         time.sleep(60)
-        today = datetime.date.today()
-        if today != yesterday:
+        this_year = datetime.datetime.now().year
+        if this_year != last_year:
             print("Starting automatic indexing!")
             index()
             print("Automatic indexing done!")
 
-        yesterday = datetime.date.today()
+        last_year = datetime.datetime.now().year
         
 def crawl(website):
     website = website.rstrip("/")
@@ -37,9 +38,14 @@ def crawl(website):
     banned = []
     visited = [website]
 
-    for visit_now in range(10000):
+    visit_now = -1
+    while True:
+        visit_now += 1
         try:
             visited = list(dict.fromkeys(visited[:]))
+
+            delay = random.uniform(5, 15)
+            time.sleep(delay)
 
             driver.get(visited[visit_now])
             data = driver.page_source
@@ -58,24 +64,10 @@ def crawl(website):
                     pass
 
                 try:
-                    soup.findAll("img")
-                    images = soup.find_all("img")
-                    for image in images:
-                        if image["src"] is not None:
-                            links.append(image["src"])
-
-                except:
-                    pass
-
-                try:
                     new_links = soup.find_all("link")
                     for link in new_links:
                         if link.get("href") is not None:
                             links.append(link.get("href"))
-                       
-                        if link.get("imagesrcset") is not None:
-                            for i in link.get("imagesrcset").split(","):
-                                links.append(i.strip())
 
                 except:
                     pass
@@ -83,30 +75,16 @@ def crawl(website):
                 links = list(dict.fromkeys(links[:]))
                
                 for path in links:
-                    if re.search("^[a-zA-Z0-9]", path.lstrip("/")) and not re.search("script|data:", path):
+                    if re.search("^[a-zA-Z0-9]", path.rstrip("/")) and not re.search("script|data:", path):
                         if path.startswith("/"):
                             visited.append(website + path)
 
-                        elif path.startswith("http://") or path.startswith("https://"):
+                        elif "://" in path:
                             if urllib.parse.urlparse(website).netloc in urllib.parse.urlparse(path).netloc:
                                 visited.append(path)
 
                         else:
                             visited.append(website + "/" + path)
-
-                scripts = soup.find_all("script")
-                for script in scripts:
-                    if script.get("src") is not None:
-                        path = script.get("src")
-                        if re.search("^[a-zA-Z0-9]", path.lstrip("/")) and not re.search("script|data:", path):
-                            if path.startswith("/"):
-                                visited.append(website + path)
-     
-                            elif path.startswith("http://") or path.startswith("https://") or path.startswith("ftp://"):
-                                visited.append(path)
-     
-                            else:
-                                visited.append(website + "/" + path)
  
         except IndexError:
             break
@@ -137,14 +115,14 @@ def index():
             new_line = line.rstrip("\n")
             urls.append(new_line.rstrip("/"))
 
-    delay = 1
-
     hits = {}
 
     count = -1
     while True:
         try:
             count += 1
+            delay = random.uniform(5, 15)
+            time.sleep(delay)
             
             driver.get(urls[count])
             my_request = driver.page_source
