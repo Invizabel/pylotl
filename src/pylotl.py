@@ -55,36 +55,81 @@ def crawl(website):
                 soup = BeautifulSoup(data, "html.parser")
 
                 try:
-                    new_links = soup.find_all("a")
-                    for link in new_links:
-                        if link.get("href") is not None:
-                            links.append(link.get("href"))
+                    links = soup.find_all("a")
+                    for link in links:
+                        visited.append(link.get("href"))
 
                 except:
                     pass
 
                 try:
-                    new_links = soup.find_all("link")
-                    for link in new_links:
-                        if link.get("href") is not None:
-                            links.append(link.get("href"))
+                    div_container = soup.find("div")
+                    links = div_container.find_all("a")
+                    for link in links:
+                        visited.append(urllib.parse.urljoin(website, link.get("href")))
 
                 except:
                     pass
-               
-                links = list(dict.fromkeys(links[:]))
-               
-                for path in links:
-                    if re.search("^[a-zA-Z0-9]", path.rstrip("/")) and not re.search("script|data:", path):
-                        if path.startswith("/"):
-                            visited.append(website + path)
 
-                        elif "://" in path:
-                            if urllib.parse.urlparse(website).netloc in urllib.parse.urlparse(path).netloc:
-                                visited.append(path)
+                try:
+                    link = soup.find("a", string="Click here")
+                    if link:
+                        visited.append(urllib.parse.urljoin(website, link.get("href")))
 
-                        else:
-                            visited.append(website + "/" + path)
+                except:
+                    pass
+
+                try:
+                    link = soup.find("a", string=re.compile("Click"))
+                    if link:
+                        visited.append(urllib.parse.urljoin(website, link.get("href")))
+
+                except:
+                    pass
+
+                try:
+                    special_links = soup.find_all("a", attrs={'rel': 'nofollow'})
+                    for link in special_links:
+                        visited.append(urllib.parse.urljoin(website, link.get("href")))
+
+                except:
+                    pass
+
+                try:
+                    nested_links = soup.find("div").find_all("a")
+                    for link in nested_links:
+                        visited.append(urllib.parse.urljoin(website, link.get("href")))
+
+                except:
+                    pass
+
+                try:
+                    list_items = soup.find_all("li")
+                    for item in list_items:
+                        link = item.find("a")
+                        if link:
+                            visited.append(urllib.parse.urljoin(website, link.get("href")))
+
+                except:
+                    pass
+
+                try:
+                    table_rows = soup.find_all("tr")
+                    for row in table_rows:
+                        link = row.find("a")
+                        if link:
+                            visited.append(urllib.parse.urljoin(website, link.get("href")))
+
+                except:
+                    pass
+
+                try:
+                    links = soup.find_all("link")
+                    for link in links:
+                        visited.append(urllib.parse.urljoin(website, link.get("href")))
+
+                except:
+                    pass
  
         except IndexError:
             break
@@ -126,7 +171,7 @@ def index():
             
             driver.get(urls[count])
             my_request = driver.page_source
-            if re.search(r"<\s*html", my_request) and len(my_request) < 100000000:
+            if len(my_request) < 100000000:
                 soup = BeautifulSoup(my_request, "html.parser")
                 [s.extract() for s in soup(["style", "script", "[document]", "head", "title"])]
                 readable_text = soup.getText().split("\n")
