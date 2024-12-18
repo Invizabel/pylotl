@@ -1,7 +1,6 @@
 import datetime
 import json
 import os
-import random
 import re
 import threading
 import time
@@ -43,9 +42,7 @@ def crawl(website):
         visit_now += 1
         try:
             visited = list(dict.fromkeys(visited[:]))
-
-            delay = random.uniform(5, 15)
-            time.sleep(delay)
+            print(f"crawling: {visited[visit_now]}")
 
             driver.get(visited[visit_now])
             data = driver.page_source
@@ -57,7 +54,7 @@ def crawl(website):
                 try:
                     links = soup.find_all("a")
                     for link in links:
-                        visited.append(link.get("href"))
+                        visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
                 except:
                     pass
@@ -66,7 +63,7 @@ def crawl(website):
                     div_container = soup.find("div")
                     links = div_container.find_all("a")
                     for link in links:
-                        visited.append(urllib.parse.urljoin(website, link.get("href")))
+                        visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
                 except:
                     pass
@@ -74,7 +71,7 @@ def crawl(website):
                 try:
                     link = soup.find("a", string="Click here")
                     if link:
-                        visited.append(urllib.parse.urljoin(website, link.get("href")))
+                        visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
                 except:
                     pass
@@ -82,7 +79,7 @@ def crawl(website):
                 try:
                     link = soup.find("a", string=re.compile("Click"))
                     if link:
-                        visited.append(urllib.parse.urljoin(website, link.get("href")))
+                        visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
                 except:
                     pass
@@ -90,7 +87,7 @@ def crawl(website):
                 try:
                     special_links = soup.find_all("a", attrs={'rel': 'nofollow'})
                     for link in special_links:
-                        visited.append(urllib.parse.urljoin(website, link.get("href")))
+                        visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
                 except:
                     pass
@@ -98,7 +95,7 @@ def crawl(website):
                 try:
                     nested_links = soup.find("div").find_all("a")
                     for link in nested_links:
-                        visited.append(urllib.parse.urljoin(website, link.get("href")))
+                        visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
                 except:
                     pass
@@ -108,7 +105,7 @@ def crawl(website):
                     for item in list_items:
                         link = item.find("a")
                         if link:
-                            visited.append(urllib.parse.urljoin(website, link.get("href")))
+                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
                 except:
                     pass
@@ -118,7 +115,7 @@ def crawl(website):
                     for row in table_rows:
                         link = row.find("a")
                         if link:
-                            visited.append(urllib.parse.urljoin(website, link.get("href")))
+                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
                 except:
                     pass
@@ -126,7 +123,7 @@ def crawl(website):
                 try:
                     links = soup.find_all("link")
                     for link in links:
-                        visited.append(urllib.parse.urljoin(website, link.get("href")))
+                        visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
                 except:
                     pass
@@ -166,8 +163,7 @@ def index():
     while True:
         try:
             count += 1
-            delay = random.uniform(5, 15)
-            time.sleep(delay)
+            print(f"indexing: {urls[count]}")
             
             driver.get(urls[count])
             my_request = driver.page_source
