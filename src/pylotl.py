@@ -198,14 +198,34 @@ def index():
     with open("index.json", "w") as file:
         file.write(hits)
 
-def search(query):
+def search(query = "", parameter = ""):
     hits = []
     with open("index.json", "r") as file:
         json_data = json.loads(file.read())
 
+    cat = ""
     for key, value in json_data.items():
         for _ in value:
-            if re.search(query, _):
+            cat += f"{_} "
+
+        if parameter == "BASIC":
+            if query in cat:
+                hits.append(key)
+
+        if parameter == "REGEX":
+            if re.search(query, cat):
+                hits.append(key)
+
+        if parameter == "EMAIL":
+            if re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", cat):
+                hits.append(key)
+
+        if parameter == "SSN":
+            if re.search(r"(?!000|666)[0-8]\d{2}-(?!00)\d{2}-(?!0000)\d{4}", cat):
+                hits.append(key)
+
+        if parameter == "IP":
+            if re.search(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", cat):
                 hits.append(key)
 
     hits = list(dict.fromkeys(hits[:]))
@@ -322,7 +342,17 @@ def search_html():
                       <form method="POST">
                       <label for="query">Query:</label><br>
                       <input type="text" id="query" name="query"><br>
+                      <label for="parameter">Choose a search type:</label>
+                      <select name="parameter" id="parameter">
+                      <option value="BASIC">BASIC</option>
+                      <option value="REGEX">REGEX</option>
+                      <option value="EMAIL">EMAIL</option>
+                      <option value="SSN">SSN</option>
+                      <option value="IP">IP ADDRESS</option>
+                      </select>
+                      <br>
                       <input type="submit" id="GO" name="GO" value="GO">
+                      <br>
                       </strong><br><a href="/crawl">Crawl</a>
                       </form>
                       </body>
@@ -340,14 +370,24 @@ def search_html():
                       <form method="POST">
                       <label for="query">Query:</label><br>
                       <input type="text" id="query" name="query"><br>
+                      <label for="parameter">Choose a search type:</label>
+                      <select name="parameter" id="parameter">
+                      <option value="BASIC">BASIC</option>
+                      <option value="REGEX">REGEX</option>
+                      <option value="EMAIL">EMAIL</option>
+                      <option value="SSN">SSN</option>
+                      <option value="IP">IP ADDRESS</option>
+                      </select>
+                      <br>
                       <input type="submit" id="GO" name="GO" value="GO">
+                      <br>
                       </strong><br><a href="/crawl">Crawl</a>
                       </form>
                       <br>
                     '''
             
             query = request.form["query"]
-            hits = search(query)
+            hits = search(query, request.form["parameter"])
             html += f'<strong>You searched for: {query}</strong><br>'
             if hits is not None:
                 for hit in hits:
