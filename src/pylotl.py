@@ -13,6 +13,7 @@ from selenium import webdriver
 
 app = Flask(__name__)
 queue = []
+queue.append("https://www.example.com")
 
 options = webdriver.FirefoxOptions()
 options.add_argument("-headless")
