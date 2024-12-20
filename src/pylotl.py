@@ -42,97 +42,97 @@ def crawl(website):
         try:
             visited = list(dict.fromkeys(visited[:]))
             print(f"crawling: {visited[visit_now]}")
+            if urllib.parse.urlparse(visited[visit_now]).port == 80 or urllib.parse.urlparse(visited[visit_now]).port == 443 or urllib.parse.urlparse(visited[visit_now]).port == None:
+                driver.get(visited[visit_now])
+                data = driver.page_source
+                if len(data) < 100000000:
+                    links = []
+                   
+                    soup = BeautifulSoup(data, "html.parser")
 
-            driver.get(visited[visit_now])
-            data = driver.page_source
-            if len(data) < 100000000:
-                links = []
-               
-                soup = BeautifulSoup(data, "html.parser")
+                    try:
+                        links = soup.find_all("a")
+                        for link in links:
+                            if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
+                                visited.append()
 
-                try:
-                    links = soup.find_all("a")
-                    for link in links:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
+                    except:
+                        pass
 
-                except:
-                    pass
+                    try:
+                        div_container = soup.find("div")
+                        links = div_container.find_all("a")
+                        for link in links:
+                            if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
+                                visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
-                try:
-                    div_container = soup.find("div")
-                    links = div_container.find_all("a")
-                    for link in links:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
+                    except:
+                        pass
 
-                except:
-                    pass
+                    try:
+                        link = soup.find("a", string="Click here")
+                        if link:
+                            if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
+                                visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
-                try:
-                    link = soup.find("a", string="Click here")
-                    if link:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
+                    except:
+                        pass
 
-                except:
-                    pass
+                    try:
+                        link = soup.find("a", string=re.compile("Click"))
+                        if link:
+                            if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
+                                visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
-                try:
-                    link = soup.find("a", string=re.compile("Click"))
-                    if link:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
+                    except:
+                        pass
 
-                except:
-                    pass
+                    try:
+                        special_links = soup.find_all("a", attrs={'rel': 'nofollow'})
+                        for link in special_links:
+                            if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
+                                visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
-                try:
-                    special_links = soup.find_all("a", attrs={'rel': 'nofollow'})
-                    for link in special_links:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
+                    except:
+                        pass
 
-                except:
-                    pass
+                    try:
+                        nested_links = soup.find("div").find_all("a")
+                        for link in nested_links:
+                            if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
+                                visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
-                try:
-                    nested_links = soup.find("div").find_all("a")
-                    for link in nested_links:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
+                    except:
+                        pass
 
-                except:
-                    pass
+                    try:
+                        list_items = soup.find_all("li")
+                        for item in list_items:
+                            link = item.find("a")
+                            if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
+                                visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
-                try:
-                    list_items = soup.find_all("li")
-                    for item in list_items:
-                        link = item.find("a")
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
+                    except:
+                        pass
 
-                except:
-                    pass
+                    try:
+                        table_rows = soup.find_all("tr")
+                        for row in table_rows:
+                            link = row.find("a")
+                            if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
+                                visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
-                try:
-                    table_rows = soup.find_all("tr")
-                    for row in table_rows:
-                        link = row.find("a")
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
+                    except:
+                        pass
 
-                except:
-                    pass
+                    try:
+                        links = soup.find_all("link")
+                        for link in links:
+                            if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
+                                visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
 
-                try:
-                    links = soup.find_all("link")
-                    for link in links:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
-
-                except:
-                    pass
+                    except:
+                        pass
  
         except IndexError:
             break
@@ -150,7 +150,7 @@ def crawl(website):
     try:
         with open("links.txt", "a") as file:
             for link in visited:
-                if urllib.parse.urlparse(website).netloc in link and link not in exists:
+                if link not in exists:
                     file.write(f"{link}\n")
 
     except:
