@@ -49,17 +49,29 @@ async def pylotl(host):
                             if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(link).netloc:
                                 new_link = link
 
+                            else:
+                                continue
+
                         elif link.startswith("//"):
                             if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(urllib.parse.urlparse(response.url).scheme + ":" + link).netloc:
                                 new_link = urllib.parse.urlparse(response.url).scheme + ":" + link
+
+                            else:
+                                continue
 
                         elif link.startswith("/") and not link.startswith("//"):
                             if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}{link}").netloc:
                                 new_link = f"{response.url.rstrip('/')}{link}"
 
+                            else:
+                                continue
+                            
                         else:
                             if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}/{link}").netloc:
                                 new_link = f"{response.url.rstrip('/')}/{link}"
+
+                            else:
+                                continue
 
                         if not skip:
                             new_link = new_link.rstrip("/")
@@ -70,9 +82,6 @@ async def pylotl(host):
 
             if old_visit_count == len(visits):
                 break
-
-        except IndexError:
-            break
 
         except:
             pass
