@@ -1,461 +1,101 @@
-import datetime
-import json
-import os
+import argparse
+import asyncio
 import re
-import threading
-import time
+import os
+import requests
+import TheSilent
 import urllib.parse
 import warnings
-from bs4 import BeautifulSoup
 from clear import clear
-from flask import *
-from selenium import webdriver
 
-app = Flask(__name__)
-queue = []
-queue.append("https://www.example.com")
+warnings.filterwarnings("ignore")
+session = requests.Session()
+session.headers.update({"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                        "Accept-Encoding": "gzip, deflate",
+                        "Accept-Language": "en-US,en;q=0.5",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0",
+                        "UPGRADE-INSECURE-REQUESTS": "1"})
 
-options = webdriver.FirefoxOptions()
-options.add_argument("-headless")
-driver = webdriver.Firefox(options=options)
+session.timeout = 10
+session.verify = False
 
-def automatic_index():
-    last_year = datetime.datetime.now().year
-    while True:
-        time.sleep(60)
-        this_year = datetime.datetime.now().year
-        if this_year != last_year:
-            print("Starting automatic indexing!")
-            index()
-            print("Automatic indexing done!")
-
-        last_year = datetime.datetime.now().year
-        
-def crawl(website):
-    website = website.rstrip("/")
-    warnings.filterwarnings("ignore")
- 
-    banned = []
-    visited = [website]
-
-    for visit_now in range(10000):
+async def fetch(url):
+    def request():
         try:
-            visited = list(dict.fromkeys(visited[:]))
-            print(f"crawling: {visited[visit_now]}")
-            driver.get(visited[visit_now])
-            data = driver.page_source
-            if len(data) < 100000000:
-                links = []
-               
-                soup = BeautifulSoup(data, "html.parser")
-
-                try:
-                    links = soup.find_all("a")
-                    for link in links:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            if urllib.parse.urlparse(website).netloc in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                                if urllib.parse.urlparse(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href"))).port == None:
-                                    visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
-
-                except:
-                    pass
-
-                try:
-                    div_container = soup.find("div")
-                    links = div_container.find_all("a")
-                    for link in links:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            if urllib.parse.urlparse(website).netloc in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                                if urllib.parse.urlparse(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href"))).port == None:
-                                    visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
-
-                except:
-                    pass
-
-                try:
-                    link = soup.find("a", string="Click here")
-                    if link:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            if urllib.parse.urlparse(website).netloc in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                                if urllib.parse.urlparse(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href"))).port == None:
-                                    visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
-
-                except:
-                    pass
-
-                try:
-                    link = soup.find("a", string=re.compile("Click"))
-                    if link:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            if urllib.parse.urlparse(website).netloc in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                                if urllib.parse.urlparse(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href"))).port == None:
-                                    visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
-
-                except:
-                    pass
-
-                try:
-                    special_links = soup.find_all("a", attrs={'rel': 'nofollow'})
-                    for link in special_links:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            if urllib.parse.urlparse(website).netloc in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                                if urllib.parse.urlparse(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href"))).port == None:
-                                    visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
-
-                except:
-                    pass
-
-                try:
-                    nested_links = soup.find("div").find_all("a")
-                    for link in nested_links:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            if urllib.parse.urlparse(website).netloc in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                                if urllib.parse.urlparse(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href"))).port == None:
-                                    visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
-                except:
-                    pass
-
-                try:
-                    list_items = soup.find_all("li")
-                    for item in list_items:
-                        link = item.find("a")
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            if urllib.parse.urlparse(website).netloc in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                                if urllib.parse.urlparse(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href"))).port == None:
-                                    visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
-
-                except:
-                    pass
-
-                try:
-                    table_rows = soup.find_all("tr")
-                    for row in table_rows:
-                        link = row.find("a")
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            if urllib.parse.urlparse(website).netloc in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                                if urllib.parse.urlparse(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href"))).port == None:
-                                    visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
-
-                except:
-                    pass
-
-                try:
-                    links = soup.find_all("link")
-                    for link in links:
-                        if "://" in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                            if urllib.parse.urlparse(website).netloc in urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")):
-                                if urllib.parse.urlparse(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href"))).port == None:
-                                    visited.append(urllib.parse.urljoin(urllib.parse.urlparse(visited[visit_now]).scheme + "://" + urllib.parse.urlparse(visited[visit_now]).netloc, link.get("href")))
-
-                except:
-                    pass
- 
-        except IndexError:
-            break
- 
+            return session.get(url)
         except:
-            pass
-    
-    exists = []
-    if os.path.exists("links.txt"):
-        with open("links.txt", "r") as file:
-            for line in file:
-                new_line = line.rstrip("\n")
-                exists.append(new_line)
+            return None
+    return await asyncio.to_thread(request)
 
-    try:
-        with open("links.txt", "a") as file:
-            for link in visited:
-                if link not in exists:
-                    file.write(f"{link}\n")
-
-    except:
-        pass
-
-    queue.remove(website)
-    visited = []
-                
-def index():
-    urls = []
-    with open("links.txt", "r") as file:
-        for line in file:
-            new_line = line.rstrip("\n")
-            urls.append(new_line.rstrip("/"))
-
-    hits = {}
-
-    count = -1
+async def pylotl(host):
+    visits = [host]
+    links = [host]
+    count = 0
     while True:
         try:
             count += 1
-            print(f"indexing: {urls[count]}")
-            
-            driver.get(urls[count])
-            my_request = driver.page_source
-            if len(my_request) < 100000000:
-                soup = BeautifulSoup(my_request, "html.parser")
-                [s.extract() for s in soup(["style", "script", "[document]", "head", "title"])]
-                readable_text = soup.getText().split("\n")
-                new_text = []
-                for i in readable_text:
-                    i = re.sub(r"\s+", " ", i)
-                    if len(i) > 0 and i != " ":
-                        new_text.append(i)
+            print(f"CRAWLING WITH DEPTH OF: {count}")
+            tasks = [fetch(link) for link in links]
+            responses = await asyncio.gather(*tasks)
+            skip = False
+            old_visit_count = len(visits)
+            for response in responses:
+                if response:
+                    ts = TheSilent.TheSilent(response.text)
+                    links = ts.links()
+                    for link in links:
+                        link = link.encode("ascii",errors="ignore").decode()
+                        if link.startswith("http://") or link.startswith("https://"):
+                            if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(link).netloc:
+                                new_link = link
 
-                new_text = list(dict.fromkeys(new_text[:]))
-                new_text.sort()
-                hits.update({urls[count]: new_text})
+                        elif link.startswith("//"):
+                            if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(urllib.parse.urlparse(response.url).scheme + ":" + link).netloc:
+                                new_link = urllib.parse.urlparse(response.url).scheme + ":" + link
+
+                        elif link.startswith("/") and not link.startswith("//"):
+                            if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}{link}").netloc:
+                                new_link = f"{response.url.rstrip('/')}{link}"
+
+                        else:
+                            if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}/{link}").netloc:
+                                new_link = f"{response.url.rstrip('/')}/{link}"
+
+                        if not skip:
+                            new_link = new_link.rstrip("/")
+                            visits.append(new_link)
+                            visits = list(dict.fromkeys(visits[:]))
+                            links.append(new_link)
+                            links = list(dict.fromkeys(links[:]))
+
+            if old_visit_count == len(visits):
+                break
 
         except IndexError:
             break
 
         except:
             pass
-
-    hits = json.dumps(hits, indent = 4, sort_keys = True)
-    with open("index.json", "w") as file:
-        file.write(hits)
-
-def search(query = "", parameter = ""):
-    hits = []
-    with open("index.json", "r") as file:
-        json_data = json.loads(file.read())
-
-    cat = ""
-    for key, value in json_data.items():
-        for _ in value:
-            cat += f"{_} "
-
-        if parameter == "BASIC":
-            if query in cat:
-                hits.append(key)
-
-        if parameter == "REGEX":
-            if re.search(query, cat):
-                hits.append(key)
-
-        if parameter == "EMAIL":
-            if re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", cat):
-                hits.append(key)
-
-        if parameter == "SSN":
-            if re.search(r"(?!000|666)[0-8]\d{2}-(?!00)\d{2}-(?!0000)\d{4}", cat):
-                hits.append(key)
-
-        if parameter == "IP":
-            if re.search(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", cat):
-                hits.append(key)
-
-    hits = list(dict.fromkeys(hits[:]))
-    hits.sort()
-
-    if len(hits) > 0:
-        return hits
-
-    else:
-        return None
-
-@app.route("/crawl", methods=["GET", "POST"])
-def crawl_html():
-    global queue
-    
-    if os.path.exists("links.txt"):
-        if request.method == "GET":
-            html = '''<html>
-                      <head>
-                      <title>pylotl</title>
-                      </head>
-                      <body>
-                      <form method="POST">
-                      <label for="crawl">Crawl:</label><br>
-                      <input type="text" id="crawl" name="crawl"><br>
-                      <input type="submit" id="GO" name="GO" value="GO">
-                      </strong><br><a href="/search">Search</a>
-                      </form>
-                      </body>
-                      </html>
-                    '''
-
-            return  render_template_string(html)
-
-        if request.method == "POST":
-            urls = []
-            with open("links.txt", "r") as file:
-                for line in file:
-                    new_line = line.rstrip("\n")
-                    urls.append(new_line.rstrip("/"))
-
-            for i in queue:
-                if  i == request.form["crawl"].rstrip("/"):
-                    html = '''<html>
-                              <head>
-                              <title>pylotl</title>
-                              </head>
-                              <body>
-                              <form method="POST">
-                              <label for="crawl">Crawl:</label><br>
-                              <input type="text" id="crawl" name="crawl"><br>
-                              <input type="submit" id="GO" name="GO" value="GO">''' + f'<br><strong>{request.form["crawl"]} is already queued</strong><br><a href="/search">Search</a></form></body></html>'''
-
-                    return  render_template_string(html)
-
-            if request.form["crawl"].rstrip("/") not in urls:
-                queue.append(request.form["crawl"])
-                crawl(request.form["crawl"])
-                index()
-                html = '''<html>
-                          <head>
-                          <title>pylotl</title>
-                          </head>
-                          <body>
-                          <form method="POST">
-                          <label for="crawl">Crawl:</label><br>
-                          <input type="text" id="crawl" name="crawl"><br>
-                              <input type="submit" id="GO" name="GO" value="GO">''' + f'<br><strong>Done crawling and indexing {request.form["crawl"]}</strong><br><a href="/search">Search</a></form></body></html>'''
-
-                return  render_template_string(html)
-
-            else:
-                html = '''<html>
-                          <head>
-                          <title>pylotl</title>
-                          </head>
-                          <body>
-                          <form method="POST">
-                          <label for="crawl">Crawl:</label><br>
-                          <input type="text" id="crawl" name="crawl"><br>
-                          <input type="submit" id="GO" name="GO" value="GO">
-                          </strong><br><a href="/search">Search</a></form></body></html>
-                          </form>
-                          <strong>We already have that indexed!</strong>
-                          </body>
-                          </html>'''
-                
-        return  render_template_string(html)
-
-    else:
-        crawl("https://www.example.com")
-        index()
-        html = '''<html>
-                      <head>
-                      <title>pylotl</title>
-                      </head>
-                      <body>
-                      <strong>We are currently setting up. Please try again!</strong>
-                      </body>
-                      </html>
-                    '''
-
-        return  render_template_string(html)
-
-@app.route("/search", methods=["GET", "POST"])
-def search_html():
-    if os.path.exists("index.json"):
-        if request.method == "GET":
-            html = '''<html>
-                      <head>
-                      <title>pylotl</title>
-                      </head>
-                      <body>
-                      <form method="POST">
-                      <label for="query">Query:</label><br>
-                      <input type="text" id="query" name="query"><br>
-                      <label for="parameter">Choose a search type:</label>
-                      <select name="parameter" id="parameter">
-                      <option value="BASIC">BASIC</option>
-                      <option value="REGEX">REGEX</option>
-                      <option value="EMAIL">EMAIL</option>
-                      <option value="SSN">SSN</option>
-                      <option value="IP">IP ADDRESS</option>
-                      </select>
-                      <br>
-                      <input type="submit" id="GO" name="GO" value="GO">
-                      <br>
-                      </strong><br><a href="/crawl">Crawl</a>
-                      </form>
-                      </body>
-                      </html>
-                    '''
-            
-            return render_template_string(html)
-
-        if request.method == "POST":
-            html = '''<html>
-                      <head>
-                      <title>pylotl</title>
-                      </head>
-                      <body>
-                      <form method="POST">
-                      <label for="query">Query:</label><br>
-                      <input type="text" id="query" name="query"><br>
-                      <label for="parameter">Choose a search type:</label>
-                      <select name="parameter" id="parameter">
-                      <option value="BASIC">BASIC</option>
-                      <option value="REGEX">REGEX</option>
-                      <option value="EMAIL">EMAIL</option>
-                      <option value="SSN">SSN</option>
-                      <option value="IP">IP ADDRESS</option>
-                      </select>
-                      <br>
-                      <input type="submit" id="GO" name="GO" value="GO">
-                      <br>
-                      </strong><br><a href="/crawl">Crawl</a>
-                      </form>
-                      <br>
-                    '''
-            
-            query = request.form["query"]
-            hits = search(query, request.form["parameter"])
-            html += f'<strong>You searched for: {query}</strong><br>'
-            if hits is not None:
-                for hit in hits:
-                    html += f'<a href="{hit}">{hit}</a><br>'
-
-                html += '''</body>
-                           </html>
-                           '''
-
-            else:
-                html += '''No hits found!
-                           </body>
-                           </html>
-                           '''
-            
-            return render_template_string(html)
-
-    else:
-        crawl("https://www.example.com")
-        index()
-        html = '''<html>
-                      <head>
-                      <title>pylotl</title>
-                      </head>
-                      <body>
-                      <strong>We are currently setting up. Please try again!</strong>
-                      </body>
-                      </html>
-                    '''
-
-        return  render_template_string(html)
-        
-@app.route("/", methods=["GET"])
-def main_html():
-    if request.method == "GET":
-            html = '''<html>
-                      <head>
-                      <title>pylotl</title>
-                      </head>
-                      <body>
-                      <a href="/crawl">Crawl</a>
-                      <br>
-                      <a href="/search">Search</a>
-                      </body>
-                      </html>
-                    '''
-            
-            return render_template_string(html)
+                    
+    session.close()
+    visits = list(dict.fromkeys(visits[:]))
+    visits.sort()
+    return visits
 
 if __name__ == "__main__":
     clear()
-    my_thread = threading.Thread(target = automatic_index).start()
-    app.run(debug=False, host="0.0.0.0")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-host",required=True)
+    args = parser.parse_args()
+    
+    visits = asyncio.run(pylotl(args.host))
+
+    if not os.path.exists("PYLOTL"):
+        os.mkdir("PYLOTL")
+
+    with open(f"PYLOTL/{urllib.parse.urlparse(args.host).netloc}.txt","w") as file:
+        for visit in visits:
+            file.write(f"{visit}\n")
+
+    print("DONE!")
