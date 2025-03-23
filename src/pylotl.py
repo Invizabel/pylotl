@@ -28,7 +28,6 @@ async def fetch(url):
     return await asyncio.to_thread(request)
 
 async def pylotl(host):
-    all_links = [host]
     visits = [host]
     links = [host]
     count = 0
@@ -50,37 +49,29 @@ async def pylotl(host):
                             if link.startswith("http://") or link.startswith("https://"):
                                 if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(link).netloc:
                                     new_link = link
-                                    all_links.append(new_link)
 
                                 else:
-                                    all_links.append(link)
                                     continue
 
                             elif link.startswith("//"):
                                 if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(urllib.parse.urlparse(response.url).scheme + ":" + link).netloc:
                                     new_link = urllib.parse.urlparse(response.url).scheme + ":" + link
-                                    all_links.append(new_link)
 
                                 else:
-                                    all_links.append(urllib.parse.urlparse(response.url).scheme + ":" + link)
                                     continue
 
                             elif link.startswith("/") and not link.startswith("//"):
                                 if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}{link}").netloc:
                                     new_link = f"{response.url.rstrip('/')}{link}"
-                                    all_links.append(new_link)
 
                                 else:
-                                    all_links.append(f"{response.url.rstrip('/')}{link}")
                                     continue
                                 
                             else:
                                 if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}/{link}").netloc:
                                     new_link = f"{response.url.rstrip('/')}/{link}"
-                                    all_links.append(new_link)
 
                                 else:
-                                    all_links.append(f"{response.url.rstrip('/')}/{link}")
                                     continue
 
                             if not skip:
@@ -97,9 +88,9 @@ async def pylotl(host):
             pass
                     
     session.close()
-    all_links = list(dict.fromkeys(all_links[:]))
-    all_links.sort()
-    return all_links
+    visits = list(dict.fromkeys(visits[:]))
+    visits.sort()
+    return visits
 
 if __name__ == "__main__":
     clear()
