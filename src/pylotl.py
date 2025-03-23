@@ -28,6 +28,7 @@ async def fetch(url):
     return await asyncio.to_thread(request)
 
 async def pylotl(host):
+    all_links = [host]
     visits = [host]
     links = [host]
     count = 0
@@ -41,44 +42,53 @@ async def pylotl(host):
             old_visit_count = len(visits)
             for response in responses:
                 if response:
-                    ts = TheSilent.TheSilent(response.text)
-                    links = ts.links()
-                    for link in links:
-                        link = link.encode("ascii",errors="ignore").decode()
-                        if link.startswith("http://") or link.startswith("https://"):
-                            if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(link).netloc:
-                                new_link = link
+                    if len(response.text) <= 25000000:
+                        ts = TheSilent.TheSilent(response.text)
+                        links = ts.links()
+                        for link in links:
+                            link = link.encode("ascii",errors="ignore").decode()
+                            if link.startswith("http://") or link.startswith("https://"):
+                                if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(link).netloc:
+                                    new_link = link
+                                    all_links.append(new_link)
 
+                                else:
+                                    all_links.append(link)
+                                    continue
+
+                            elif link.startswith("//"):
+                                if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(urllib.parse.urlparse(response.url).scheme + ":" + link).netloc:
+                                    new_link = urllib.parse.urlparse(response.url).scheme + ":" + link
+                                    all_links.append(new_link)
+
+                                else:
+                                    all_links.append(urllib.parse.urlparse(response.url).scheme + ":" + link)
+                                    continue
+
+                            elif link.startswith("/") and not link.startswith("//"):
+                                if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}{link}").netloc:
+                                    new_link = f"{response.url.rstrip('/')}{link}"
+                                    all_links.append(new_link)
+
+                                else:
+                                    all_links.append(f"{response.url.rstrip('/')}{link}")
+                                    continue
+                                
                             else:
-                                continue
+                                if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}/{link}").netloc:
+                                    new_link = f"{response.url.rstrip('/')}/{link}"
+                                    all_links.append(new_link)
 
-                        elif link.startswith("//"):
-                            if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(urllib.parse.urlparse(response.url).scheme + ":" + link).netloc:
-                                new_link = urllib.parse.urlparse(response.url).scheme + ":" + link
+                                else:
+                                    all_links.append(f"{response.url.rstrip('/')}/{link}")
+                                    continue
 
-                            else:
-                                continue
-
-                        elif link.startswith("/") and not link.startswith("//"):
-                            if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}{link}").netloc:
-                                new_link = f"{response.url.rstrip('/')}{link}"
-
-                            else:
-                                continue
-                            
-                        else:
-                            if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}/{link}").netloc:
-                                new_link = f"{response.url.rstrip('/')}/{link}"
-
-                            else:
-                                continue
-
-                        if not skip:
-                            new_link = new_link.rstrip("/")
-                            visits.append(new_link)
-                            visits = list(dict.fromkeys(visits[:]))
-                            links.append(new_link)
-                            links = list(dict.fromkeys(links[:]))
+                            if not skip:
+                                new_link = new_link.rstrip("/")
+                                visits.append(new_link)
+                                visits = list(dict.fromkeys(visits[:]))
+                                links.append(new_link)
+                                links = list(dict.fromkeys(links[:]))
 
             if old_visit_count == len(visits):
                 break
@@ -87,9 +97,9 @@ async def pylotl(host):
             pass
                     
     session.close()
-    visits = list(dict.fromkeys(visits[:]))
-    visits.sort()
-    return visits
+    all_links = list(dict.fromkeys(all_links[:]))
+    all_links.sort()
+    return all_links
 
 if __name__ == "__main__":
     clear()
