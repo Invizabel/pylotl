@@ -105,6 +105,7 @@ if __name__ == "__main__":
 
     with open(f"PYLOTL/{urllib.parse.urlparse(args.host).netloc}.txt","w") as file:
         for visit in visits:
+            print(visit)
             file.write(f"{visit}\n")
 
     print("DONE!")
