@@ -1,36 +1,32 @@
 import argparse
 import asyncio
+import http.cookiejar
 import re
-import os
-import requests
-import TheSilent
 import urllib.parse
-import warnings
+import urllib.request
 from clear import clear
 
-warnings.filterwarnings("ignore")
-session = requests.Session()
-session.headers.update({"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                        "Accept-Encoding": "gzip, deflate",
-                        "Accept-Language": "en-US,en;q=0.5",
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0",
-                        "UPGRADE-INSECURE-REQUESTS": "1"})
-
-session.timeout = 10
-session.verify = False
-
-async def fetch(url):
-    def request():
+async def fetch(host):
+    def fetch_html():
         try:
-            return session.get(url)
+            fake_headers = {"Accept":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36","Accept-Encoding":"deflate","Accept-Language":"en-US,en;q=0.5","User-Agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36","UPGRADE-INSECURE-REQUESTS":"1"}
+            cookie_jar = http.cookiejar.CookieJar()
+            opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+            urllib.request.install_opener(opener)
+            request = urllib.request.Request(url=host,headers=fake_headers,method="GET")
+            response = urllib.request.urlopen(request,timeout=10)
+            return response
         except:
             return None
-    return await asyncio.to_thread(request)
+    return await asyncio.to_thread(fetch_html)
 
-async def pylotl(host):
-    visits = [host]
-    links = [host]
+async def pylotl(host,subdomain_bool):
+    hits = {}
+    web_host = f"http://{host}"
+    visits = [web_host]
+    links = [web_host]
     count = 0
+
     while True:
         try:
             count += 1
@@ -41,34 +37,35 @@ async def pylotl(host):
             old_visit_count = len(visits)
             for response in responses:
                 if response:
-                    if len(response.text) <= 25000000:
-                        ts = TheSilent.TheSilent(response.text)
-                        links = ts.links()
+                    content = response.read().decode(errors="ignore")
+                   
+                    if len(content) <= 25000000:
+                        links = [i.rstrip("/") for i in list(dict.fromkeys(re.findall(r"(?:href|src|action|data|cite|poster|content|background|profile|manifest|srcset|ping)\s*=\s*[\"'](\S+?)(?=[\"'\\])",content)))] + [i.rstrip("/") for i in list(dict.fromkeys(re.findall(r"src\s*=\s*[\"\'](\S+?)(?=[\"\'\\])",content)))]
                         for link in links:
                             link = link.encode("ascii",errors="ignore").decode()
                             if link.startswith("http://") or link.startswith("https://"):
-                                if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(link).netloc:
+                                if urllib.parse.urlparse(web_host).netloc in urllib.parse.urlparse(link).netloc:
                                     new_link = link
 
                                 else:
                                     continue
 
                             elif link.startswith("//"):
-                                if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(urllib.parse.urlparse(response.url).scheme + ":" + link).netloc:
+                                if urllib.parse.urlparse(web_host).netloc in urllib.parse.urlparse(urllib.parse.urlparse(response.url).scheme + ":" + link).netloc:
                                     new_link = urllib.parse.urlparse(response.url).scheme + ":" + link
 
                                 else:
                                     continue
 
                             elif link.startswith("/") and not link.startswith("//"):
-                                if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}{link}").netloc:
+                                if urllib.parse.urlparse(web_host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}{link}").netloc:
                                     new_link = f"{response.url.rstrip('/')}{link}"
 
                                 else:
                                     continue
                                 
                             else:
-                                if urllib.parse.urlparse(host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}/{link}").netloc:
+                                if urllib.parse.urlparse(web_host).netloc in urllib.parse.urlparse(f"{response.url.rstrip('/')}/{link}").netloc:
                                     new_link = f"{response.url.rstrip('/')}/{link}"
 
                                 else:
@@ -86,27 +83,29 @@ async def pylotl(host):
 
         except:
             pass
-                    
-    session.close()
-    visits = list(dict.fromkeys(visits[:]))
-    visits.sort()
-    return visits
+
+    results = []
+    if subdomain_bool:
+        for visit in visits:
+            if not re.search("[@]",visit):
+                results.append(urllib.parse.urlparse(visit).netloc)
+
+        results = list(dict.fromkeys(results[:]))
+        results.sort()
+        return results
+
+    else:
+        return visits
 
 if __name__ == "__main__":
     clear()
-
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("-host",required=True)
+    parser.add_argument("-subdomains",action="store_true")
     args = parser.parse_args()
-    
-    visits = asyncio.run(pylotl(args.host))
 
-    if not os.path.exists("PYLOTL"):
-        os.mkdir("PYLOTL")
-
-    with open(f"PYLOTL/{urllib.parse.urlparse(args.host).netloc}.txt","w") as file:
-        for visit in visits:
-            print(visit)
-            file.write(f"{visit}\n")
-
-    print("DONE!")
+    hits = asyncio.run(pylotl(args.host,args.subdomains))
+    clear()
+    for hit in hits:
+        print(hit)

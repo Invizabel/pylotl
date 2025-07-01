@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pylotl"
-version = "0.0.37"
+version = "0.0.39"
 authors = [
   { name="Invizabel" },
 ]
